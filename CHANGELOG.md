@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2024-03-XX
+
+### Added
+
+#### Frontend Setup
+- Initialized Next.js frontend with TypeScript
+- Added Tailwind CSS for styling
+- Implemented responsive layout with navigation
+- Created core pages:
+  - Registration page with role selection
+  - Dashboard with course overview
+  - Course listing with filtering and pagination
+- Added API client utility for backend communication
+- Implemented authentication flow
+- Added toast notifications for feedback
+
 ## [0.3.0] - 2024-03-XX
 
 ### Added
