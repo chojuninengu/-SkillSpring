@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { initiatePayment } = require('../utils/payment');
-const auth = require('../middleware/auth'); // Assuming you have auth middleware
+const { authenticateToken } = require('../middleware/auth');
 
 /**
  * @route POST /api/payments/collect
  * @desc Initiate a mobile money payment collection
  * @access Private (requires authentication)
  */
-router.post('/collect', auth, async (req, res) => {
+router.post('/collect', authenticateToken, async (req, res) => {
   try {
     const { amount, phoneNumber } = req.body;
 
