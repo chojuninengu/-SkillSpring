@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+#### Mentor Assignment System
+- Added automatic mentor assignment for new students using load balancing
+- Created mentor capacity tracking system
+- Added mentor_id field to users table
+- Created mentor_capacity table for tracking mentor workload
+- Implemented endpoints:
+  - POST /api/mentors/assign/:studentId - Assign mentor to student
+  - PUT /api/mentors/:mentorId/capacity - Update mentor capacity
+  - GET /api/mentors/:mentorId/stats - Get mentor statistics
+- Added automatic mentor capacity initialization
+- Implemented transaction-safe mentor assignment process
+
 #### Enhanced Login System
 - Created modern login page with improved UI/UX
 - Added password visibility toggle
