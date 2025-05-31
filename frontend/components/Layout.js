@@ -15,45 +15,57 @@ export default function Layout({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Skip auth check for public paths
+      if (publicPaths.includes(router.pathname)) {
+        setLoading(false);
+        setInitialized(true);
+        return;
+      }
+
       try {
-        // Only check auth if we're not on a public path
-        if (!publicPaths.includes(router.pathname)) {
-          const response = await auth.getCurrentUser();
-          setUser(response.data);
-        }
+        const response = await auth.getCurrentUser();
+        setUser(response.data);
       } catch (error) {
-        // If we get an auth error and we're not on a public path, redirect to login
-        if (!publicPaths.includes(router.pathname)) {
-          router.push('/login');
+        // Clear any existing token
+        localStorage.removeItem('token');
+        
+        // Only redirect if we haven't initialized yet
+        if (!initialized) {
+          // Use window.location for first load to avoid Next.js navigation
+          window.location.href = '/login';
+          return;
         }
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
     checkAuth();
-  }, [router.pathname]);
+  }, [router.pathname, initialized]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
-    router.push('/login');
+    window.location.href = '/login';
   };
 
-  // Don't show navigation on public paths
-  if (publicPaths.includes(router.pathname)) {
-    return <main>{children}</main>;
-  }
-
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
+  }
+
+  // Don't show navigation on public paths
+  if (publicPaths.includes(router.pathname)) {
+    return <main>{children}</main>;
   }
 
   const navigation = [
