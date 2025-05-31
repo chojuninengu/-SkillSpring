@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2024-03-XX
+
+### Added
+
+#### Enhanced Login System
+- Created modern login page with improved UI/UX
+- Added password visibility toggle
+- Implemented form validation and error handling
+- Added loading state management
+- Integrated toast notifications for user feedback
+- Added "Remember Me" functionality
+- Enhanced error handling for authentication failures
+- Added secure password handling
+- Implemented responsive design for all screen sizes
+
+#### API Endpoints
+- Enhanced authentication endpoints:
+  - POST /api/auth/login - User login with validation
+  - POST /api/auth/logout - Secure user logout
+  - GET /api/auth/verify - Token verification
+  - POST /api/auth/refresh - Token refresh
+
 ## [0.4.0] - 2024-03-XX
 
 ### Added
