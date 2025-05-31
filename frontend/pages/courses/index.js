@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { getCourses, enrollInCourse } from '../../utils/api';
-import toast from 'react-hot-toast';
+import { courses, enrollments, handleApiError, handleApiSuccess } from '../../utils/api';
 
 export default function Courses() {
   const router = useRouter();
-  const [courses, setCourses] = useState([]);
+  const [courseList, setCourseList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(null);
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
 
@@ -16,30 +16,38 @@ export default function Courses() {
 
   const fetchCourses = async () => {
     try {
-      const response = await getCourses({
+      const response = await courses.getAll({
         category: category || undefined,
         page,
         limit: 9
       });
-      setCourses(response.data);
+      setCourseList(response.data);
     } catch (error) {
-      toast.error('Failed to load courses');
+      handleApiError(error, 'Failed to load courses');
     } finally {
       setLoading(false);
     }
   };
 
   const handleEnroll = async (courseId) => {
+    setEnrolling(courseId);
     try {
-      await enrollInCourse(courseId);
-      toast.success('Successfully enrolled in course!');
-      router.push('/dashboard');
+      await courses.enroll(courseId);
+      handleApiSuccess('Successfully enrolled in course!');
+      
+      // Check enrollment status
+      const status = await enrollments.getEnrollmentStatus(courseId);
+      if (status.data.status === 'active') {
+        router.push('/dashboard');
+      }
     } catch (error) {
       if (error.response?.status === 401) {
         router.push('/login');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to enroll in course');
+        handleApiError(error, 'Failed to enroll in course');
       }
+    } finally {
+      setEnrolling(null);
     }
   };
 
@@ -71,7 +79,7 @@ export default function Courses() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
+            {courseList.map((course) => (
               <div key={course.id} className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="p-6">
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -88,16 +96,17 @@ export default function Courses() {
                   </div>
                   <button
                     onClick={() => handleEnroll(course.id)}
-                    className="w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    disabled={enrolling === course.id}
+                    className="w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Enroll Now
+                    {enrolling === course.id ? 'Enrolling...' : 'Enroll Now'}
                   </button>
                 </div>
               </div>
             ))}
           </div>
 
-          {courses.length > 0 && (
+          {courseList.length > 0 && (
             <div className="mt-6 flex justify-center">
               <nav className="flex items-center space-x-2">
                 <button
@@ -110,7 +119,7 @@ export default function Courses() {
                 <span className="px-3 py-1">{page}</span>
                 <button
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={courses.length < 9}
+                  disabled={courseList.length < 9}
                   className="px-3 py-1 rounded-md bg-white shadow disabled:opacity-50"
                 >
                   Next
