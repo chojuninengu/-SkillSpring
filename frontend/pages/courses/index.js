@@ -4,7 +4,7 @@ import { courses, enrollments, handleApiError, handleApiSuccess } from '../../ut
 
 export default function Courses() {
   const router = useRouter();
-  const [courseList, setCourseList] = useState([]);
+  const [courseList, setCourseList] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(null);
   const [category, setCategory] = useState('');
@@ -24,6 +24,7 @@ export default function Courses() {
       setCourseList(response.data);
     } catch (error) {
       handleApiError(error, 'Failed to load courses');
+      setCourseList([]);
     } finally {
       setLoading(false);
     }
@@ -54,7 +55,7 @@ export default function Courses() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
       </div>
     );
   }
@@ -78,35 +79,41 @@ export default function Courses() {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {courseList.map((course) => (
-              <div key={course.id} className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {course.title}
-                  </h3>
-                  <p className="text-gray-500 mb-4 line-clamp-2">
-                    {course.description}
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-gray-500">By {course.mentor_name}</span>
-                    <span className="text-lg font-medium text-gray-900">
-                      ${course.price}
-                    </span>
+          {courseList && courseList.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {courseList.map((course) => (
+                <div key={course.id} className="bg-white shadow rounded-lg overflow-hidden">
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {course.title}
+                    </h3>
+                    <p className="text-gray-500 mb-4 line-clamp-2">
+                      {course.description}
+                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-gray-500">By {course.mentor_name}</span>
+                      <span className="text-lg font-medium text-gray-900">
+                        ${course.price}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleEnroll(course.id)}
+                      disabled={enrolling === course.id}
+                      className="w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {enrolling === course.id ? 'Enrolling...' : 'Enroll Now'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleEnroll(course.id)}
-                    disabled={enrolling === course.id}
-                    className="w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {enrolling === course.id ? 'Enrolling...' : 'Enroll Now'}
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No courses found.</p>
+            </div>
+          )}
 
-          {courseList.length > 0 && (
+          {courseList && courseList.length > 0 && (
             <div className="mt-6 flex justify-center">
               <nav className="flex items-center space-x-2">
                 <button
