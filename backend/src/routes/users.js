@@ -6,7 +6,6 @@ const {
   getCurrentUser 
 } = require('../controllers/userController');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
-const { pool } = require('../db/db');
 const db = require('../config/database');
 
 // Protected routes - require authentication
@@ -46,7 +45,7 @@ router.put('/me', authenticateToken, async (req, res) => {
 
     // Check if email is taken
     if (email) {
-      const emailExists = await pool.query(
+      const emailExists = await db.query(
         'SELECT id FROM users WHERE email = $1 AND id != $2',
         [email, req.user.id]
       );
@@ -57,15 +56,21 @@ router.put('/me', authenticateToken, async (req, res) => {
     }
 
     // Update user
-    const result = await pool.query(
+    const result = await db.query(
       'UPDATE users SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3 RETURNING id, name, email, role',
       [name, email, req.user.id]
     );
 
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user information'
+    });
   }
 });
 
