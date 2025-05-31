@@ -8,7 +8,7 @@ export default function Login() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '',
     password: '',
   });
 
@@ -17,7 +17,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { session } = await signIn(formData.email, formData.password);
+      const { session } = await signIn(formData.identifier, formData.password);
       toast.success('Login successful!');
       
       // Use window.location for redirect after successful login
@@ -51,19 +51,20 @@ export default function Login() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
+                Username or Email
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
+                  autoComplete="username"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={formData.email}
+                  value={formData.identifier}
                   onChange={handleChange}
+                  placeholder="Enter username or email"
                 />
               </div>
             </div>
