@@ -52,13 +52,25 @@ export default function Courses() {
       setEnrolling(course.id);
       setSelectedCourse(course);
       
-      // Check if user is authenticated by making a request to a protected endpoint
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Not authenticated, redirect to login
+        router.push(`/login?redirect=/courses/${course.id}`);
+        return;
+      }
+
+      // Check if user is authenticated
       const authCheckResponse = await fetch('http://localhost:3001/api/auth/check', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include'
       });
 
       if (!authCheckResponse.ok) {
-        // Not authenticated, redirect to login
+        // Token invalid or expired, redirect to login
+        localStorage.removeItem('token');
         router.push(`/login?redirect=/courses/${course.id}`);
         return;
       }
@@ -77,10 +89,12 @@ export default function Courses() {
     if (!selectedCourse) return;
 
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/payments/collect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
         body: JSON.stringify({
