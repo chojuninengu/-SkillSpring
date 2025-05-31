@@ -30,8 +30,15 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Clear token
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      
+      // Only redirect if we're not already on the login or register page
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        // Use window.location for hard reload instead of Next.js navigation
+        window.location.href = '/login';
+      }
       return Promise.reject(error);
     }
 
