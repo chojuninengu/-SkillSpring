@@ -8,6 +8,8 @@ const api = axios.create({
   },
 });
 
+let isRedirecting = false;
+
 // Request interceptor for API calls
 api.interceptors.request.use(
   (config) => {
@@ -33,13 +35,21 @@ api.interceptors.response.use(
       // Clear token
       localStorage.removeItem('token');
       
-      // Only redirect if we're not already on the login or register page
-      const currentPath = window.location.pathname;
-      if (currentPath !== '/login' && currentPath !== '/register') {
-        // Use window.location for hard reload instead of Next.js navigation
-        window.location.href = '/login';
+      // Prevent multiple redirects
+      if (!isRedirecting) {
+        isRedirecting = true;
+        
+        // Only redirect if we're not already on an auth page
+        const currentPath = window.location.pathname;
+        if (!['/login', '/register'].includes(currentPath)) {
+          window.location.href = '/login';
+        }
+        
+        // Reset redirect flag after a delay
+        setTimeout(() => {
+          isRedirecting = false;
+        }, 1000);
       }
-      return Promise.reject(error);
     }
 
     return Promise.reject(error);
