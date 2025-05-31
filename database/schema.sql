@@ -5,8 +5,23 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('student', 'mentor', 'admin')),
+    mentor_id INTEGER REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_mentor_assignment CHECK (
+        (role = 'student' AND mentor_id IS NOT NULL) OR
+        (role != 'student' AND mentor_id IS NULL)
+    )
+);
+
+-- Create mentor_capacity table
+CREATE TABLE mentor_capacity (
+    mentor_id INTEGER PRIMARY KEY REFERENCES users(id),
+    max_students INTEGER NOT NULL DEFAULT 5,
+    current_students INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_capacity CHECK (current_students <= max_students)
 );
 
 -- Create courses table
