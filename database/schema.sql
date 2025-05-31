@@ -58,6 +58,23 @@ CREATE TABLE reviews (
     UNIQUE(student_id, course_id)
 );
 
+-- Create projects table
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER REFERENCES users(id),
+    mentor_id INTEGER REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    github_url VARCHAR(255),
+    submission_file_path TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'rejected')),
+    feedback TEXT,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create trigger function to update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -75,5 +92,11 @@ CREATE TRIGGER update_users_updated_at
 
 CREATE TRIGGER update_courses_updated_at
     BEFORE UPDATE ON courses
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Create trigger for projects table
+CREATE TRIGGER update_projects_updated_at
+    BEFORE UPDATE ON projects
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column(); 
