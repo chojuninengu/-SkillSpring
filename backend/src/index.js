@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
-const mentorsRoutes = require('./routes/mentors');
 const coursesRoutes = require('./routes/courses');
 const userRoutes = require('./routes/users');
 
@@ -15,7 +14,6 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/mentors', mentorsRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/users', userRoutes);
 
