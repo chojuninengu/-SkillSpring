@@ -3,57 +3,75 @@ const db = require('./database');
 
 async function seedDatabase() {
   try {
-    // Create a mentor user
-    const hashedPassword = await bcrypt.hash('mentor123', 10);
-    const mentorResult = await db.query(
-      `INSERT INTO users (name, email, password, role) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING id`,
-      ['John Doe', 'mentor@example.com', hashedPassword, 'mentor']
+    // Check if mentor exists
+    const mentorCheck = await db.query(
+      'SELECT id FROM users WHERE email = $1',
+      ['mentor@example.com']
     );
-    const mentorId = mentorResult.rows[0].id;
+
+    let mentorId;
+    if (mentorCheck.rows.length === 0) {
+      // Create a mentor user
+      const hashedPassword = await bcrypt.hash('mentor123', 10);
+      const mentorResult = await db.query(
+        `INSERT INTO users (name, email, password, role) 
+         VALUES ($1, $2, $3, $4) 
+         RETURNING id`,
+        ['John Doe', 'mentor@example.com', hashedPassword, 'mentor']
+      );
+      mentorId = mentorResult.rows[0].id;
+    } else {
+      mentorId = mentorCheck.rows[0].id;
+    }
+
+    // Clear existing enrollments and payments
+    await db.query('DELETE FROM enrollments');
+    await db.query('DELETE FROM payments');
+    
+    // Clear existing courses
+    await db.query('DELETE FROM courses');
 
     // Sample courses
     const courses = [
       {
         title: 'Introduction to Web Development',
         description: 'Learn the basics of HTML, CSS, and JavaScript to build modern websites.',
-        price: 49.99,
+        price: 4999,  // $49.99
         category: 'programming',
         mentor_id: mentorId
       },
       {
         title: 'UI/UX Design Fundamentals',
         description: 'Master the principles of user interface and user experience design.',
-        price: 59.99,
+        price: 5999,  // $59.99
         category: 'design',
         mentor_id: mentorId
       },
       {
         title: 'Digital Marketing Essentials',
         description: 'Learn effective strategies for online marketing and brand promotion.',
-        price: 39.99,
+        price: 3999,  // $39.99
         category: 'marketing',
         mentor_id: mentorId
       },
       {
         title: 'Business Analytics',
         description: 'Learn to make data-driven business decisions using analytics tools.',
-        price: 69.99,
+        price: 6999,  // $69.99
         category: 'business',
         mentor_id: mentorId
       },
       {
         title: 'Advanced JavaScript Development',
         description: 'Deep dive into modern JavaScript features and frameworks.',
-        price: 79.99,
+        price: 7999,  // $79.99
         category: 'programming',
         mentor_id: mentorId
       },
       {
         title: 'Graphic Design for Beginners',
         description: 'Learn the fundamentals of graphic design using industry-standard tools.',
-        price: 49.99,
+        price: 4999,  // $49.99
         category: 'design',
         mentor_id: mentorId
       }
