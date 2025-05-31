@@ -37,11 +37,16 @@ async function seed() {
     }
 
     console.log('Sample data seeded successfully!');
-    process.exit(0);
   } catch (error) {
     console.error('Error seeding data:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
-seed(); 
+// Export for use in setup.js
+module.exports = { seed };
+
+// Run directly if this file is executed directly
+if (require.main === module) {
+  seed().then(() => process.exit(0)).catch(() => process.exit(1));
+} 
