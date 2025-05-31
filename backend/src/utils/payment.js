@@ -25,6 +25,19 @@ async function initiatePayment(amount, phoneNumber) {
       throw new Error('Mynkwa API key not configured');
     }
 
+    // For testing purposes, simulate a successful payment
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        success: true,
+        data: {
+          transactionId: 'test_' + Date.now(),
+          status: 'success',
+          amount: amount,
+          phoneNumber: phoneNumber
+        }
+      };
+    }
+
     // Make the API request
     const response = await axios.post(
       MYNKWA_API_URL,
@@ -43,7 +56,7 @@ async function initiatePayment(amount, phoneNumber) {
     return {
       success: true,
       data: response.data,
-      transactionId: response.data.transactionId // Adjust based on actual API response
+      transactionId: response.data.transactionId
     };
 
   } catch (error) {
