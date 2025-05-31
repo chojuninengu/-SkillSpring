@@ -3,34 +3,58 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Disclosure, Menu, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { getCurrentUser } from '../utils/api';
+import { auth } from '../utils/api';
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+const publicPaths = ['/', '/login', '/register'];
+
 export default function Layout({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const checkAuth = async () => {
       try {
-        const response = await getCurrentUser();
-        setUser(response.data);
+        // Only check auth if we're not on a public path
+        if (!publicPaths.includes(router.pathname)) {
+          const response = await auth.getCurrentUser();
+          setUser(response.data);
+        }
       } catch (error) {
-        // If not authenticated, don't set user
-        console.error('Not authenticated');
+        // If we get an auth error and we're not on a public path, redirect to login
+        if (!publicPaths.includes(router.pathname)) {
+          router.push('/login');
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUser();
-  }, []);
+    checkAuth();
+  }, [router.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    setUser(null);
     router.push('/login');
   };
+
+  // Don't show navigation on public paths
+  if (publicPaths.includes(router.pathname)) {
+    return <main>{children}</main>;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard' },
