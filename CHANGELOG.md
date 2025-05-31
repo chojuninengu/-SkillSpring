@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2024-03-XX
+
+### Added
+
+#### Role Management System
+- Enhanced User model with role validation and management
+- Added role-specific user queries and counts
+- Implemented role update functionality
+- Added user role endpoints:
+  - GET /api/users/me - Get current user details
+  - PUT /api/users/:userId/role - Update user role (admin only)
+  - GET /api/users/role/:role - List users by role (admin only)
+
+#### Enhanced Authorization
+- Added role validation in User model
+- Implemented role-based route protection
+- Added admin-only routes
+- Enhanced error handling for role-related operations
+
 ## [0.2.0] - 2024-03-XX
 
 ### Added
