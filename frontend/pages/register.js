@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { auth, handleApiError, handleApiSuccess } from '../utils/api';
+import { signUp } from '../utils/supabaseAuth';
+import { toast } from 'react-toastify';
 
 export default function Register() {
   const router = useRouter();
@@ -18,12 +19,15 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const response = await auth.register(formData);
-      localStorage.setItem('token', response.data.token);
-      handleApiSuccess('Registration successful!');
-      router.push('/dashboard');
+      const { user } = await signUp(formData.email, formData.password, {
+        name: formData.name,
+        role: formData.role
+      });
+      
+      toast.success('Registration successful! Please check your email to confirm your account.');
+      router.push('/login');
     } catch (error) {
-      handleApiError(error, 'Registration failed');
+      toast.error(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,7 @@ export default function Register() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Name
+                Full Name
               </label>
               <div className="mt-1">
                 <input
@@ -76,6 +80,7 @@ export default function Register() {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   value={formData.email}
@@ -93,6 +98,7 @@ export default function Register() {
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   value={formData.password}
@@ -103,18 +109,21 @@ export default function Register() {
 
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                I want to
+                Role
               </label>
-              <select
-                id="role"
-                name="role"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md"
-                value={formData.role}
-                onChange={handleChange}
-              >
-                <option value="student">Learn as a student</option>
-                <option value="mentor">Teach as a mentor</option>
-              </select>
+              <div className="mt-1">
+                <select
+                  id="role"
+                  name="role"
+                  required
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  value={formData.role}
+                  onChange={handleChange}
+                >
+                  <option value="student">Student</option>
+                  <option value="mentor">Mentor</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -123,7 +132,7 @@ export default function Register() {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Registering...' : 'Register'}
+                {loading ? 'Creating account...' : 'Create account'}
               </button>
             </div>
           </form>
