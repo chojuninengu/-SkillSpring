@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { getCurrentUser } from '../utils/supabaseAuth';
-import { getEnrollments, updateCourseProgress } from '../utils/supabaseDb';
-import ProtectedRoute from '../components/ProtectedRoute';
+import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 interface Enrollment {
   id: string;
@@ -15,6 +14,7 @@ interface Enrollment {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -27,29 +27,45 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const userData = await getCurrentUser();
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Get user data
+      const userResponse = await fetch('http://localhost:3001/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+
+      const userData = await userResponse.json();
       setUser(userData);
 
-      const enrollmentsData = await getEnrollments(userData.id);
-      setEnrollments(enrollmentsData);
+      // Get enrollments
+      const enrollmentsResponse = await fetch('http://localhost:3001/api/enrollments/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!enrollmentsResponse.ok) {
+        throw new Error('Failed to fetch enrollments');
+      }
+
+      const enrollmentsData = await enrollmentsResponse.json();
+      setEnrollments(enrollmentsData.data || []);
     } catch (error) {
       toast.error('Failed to load dashboard data');
+      console.error('Dashboard error:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpdateProgress = async (enrollmentId: string, progress: number) => {
-    try {
-      await updateCourseProgress(enrollmentId, progress);
-      toast.success('Progress updated successfully');
-      
-      // Refresh enrollments to show updated progress
-      const userData = await getCurrentUser();
-      const enrollmentsData = await getEnrollments(userData.id);
-      setEnrollments(enrollmentsData);
-    } catch (error) {
-      toast.error('Failed to update progress');
     }
   };
 
@@ -68,7 +84,7 @@ export default function Dashboard() {
               <div className="mt-2 h-4 bg-gray-200 rounded animate-pulse w-48"></div>
             ) : (
               <p className="mt-2 text-sm text-gray-700">
-                Welcome back, {user?.user_metadata?.name || 'Student'}!
+                Welcome back, {user?.name || 'Student'}!
               </p>
             )}
           </div>
