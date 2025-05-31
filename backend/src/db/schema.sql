@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'student',
+  name VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL CHECK (role IN ('student', 'mentor', 'admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS courses (
   id SERIAL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  price DECIMAL(10,2) NOT NULL,
+  mentor_id INTEGER REFERENCES users(id),
+  price INTEGER NOT NULL,
   category VARCHAR(100),
-  mentor_name VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS enrollments (
   id SERIAL PRIMARY KEY,
   student_id INTEGER REFERENCES users(id),
   course_id INTEGER REFERENCES courses(id),
-  status VARCHAR(50) NOT NULL DEFAULT 'active',
-  progress INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(50) DEFAULT 'active',
+  enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(student_id, course_id)
 ); 
