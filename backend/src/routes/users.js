@@ -7,23 +7,35 @@ const {
 } = require('../controllers/userController');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const { pool } = require('../db/db');
+const db = require('../config/database');
 
 // Protected routes - require authentication
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
+    const userId = req.user.id;
+    
+    const result = await db.query(
       'SELECT id, name, email, role FROM users WHERE id = $1',
-      [req.user.id]
+      [userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
   } catch (error) {
-    console.error('Error getting current user:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user information'
+    });
   }
 });
 
