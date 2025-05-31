@@ -116,4 +116,12 @@ router.get('/check', authenticateToken, (req, res) => {
   });
 });
 
+// Verify token
+router.get('/verify', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    message: 'Token is valid'
+  });
+});
+
 module.exports = router; 
