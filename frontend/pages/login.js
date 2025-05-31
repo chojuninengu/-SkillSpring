@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { auth, handleApiError, handleApiSuccess } from '../utils/api';
+import { signIn } from '../utils/supabaseAuth';
+import { toast } from 'react-toastify';
 
 export default function Login() {
   const router = useRouter();
@@ -16,14 +17,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await auth.login(formData);
-      localStorage.setItem('token', response.data.token);
-      handleApiSuccess('Login successful!');
+      const { session } = await signIn(formData.email, formData.password);
+      toast.success('Login successful!');
       
       // Use window.location for redirect after successful login
       window.location.href = '/dashboard';
     } catch (error) {
-      handleApiError(error, 'Login failed');
+      toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
