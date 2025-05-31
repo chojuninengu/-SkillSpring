@@ -13,12 +13,21 @@ interface Course {
   enrolled_students: number;
 }
 
+interface PaymentFormData {
+  phoneNumber: string;
+}
+
 export default function Courses() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [category, setCategory] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [paymentFormData, setPaymentFormData] = useState<PaymentFormData>({
+    phoneNumber: '',
+  });
 
   useEffect(() => {
     loadCourses();
@@ -38,15 +47,60 @@ export default function Courses() {
     }
   };
 
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = async (course: Course) => {
     try {
-      setEnrolling(courseId);
-      // Redirect to login if not authenticated
-      router.push(`/login?redirect=/courses/${courseId}`);
+      setEnrolling(course.id);
+      setSelectedCourse(course);
+      
+      // Check if user is authenticated by making a request to a protected endpoint
+      const authCheckResponse = await fetch('http://localhost:3001/api/auth/check', {
+        credentials: 'include'
+      });
+
+      if (!authCheckResponse.ok) {
+        // Not authenticated, redirect to login
+        router.push(`/login?redirect=/courses/${course.id}`);
+        return;
+      }
+
+      // User is authenticated, show payment modal
+      setShowPaymentModal(true);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to enroll in course');
+      toast.error(error.message || 'Failed to start enrollment process');
     } finally {
       setEnrolling(null);
+    }
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCourse) return;
+
+    try {
+      const response = await fetch('http://localhost:3001/api/payments/collect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          courseId: selectedCourse.id,
+          amount: selectedCourse.price,
+          phoneNumber: paymentFormData.phoneNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Payment successful! You are now enrolled in the course.');
+        setShowPaymentModal(false);
+        router.push('/dashboard');
+      } else {
+        toast.error(data.message || 'Payment failed');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Payment failed');
     }
   };
 
@@ -101,7 +155,7 @@ export default function Courses() {
             </div>
             <div className="px-4 py-4 sm:px-6">
               <button
-                onClick={() => handleEnroll(course.id)}
+                onClick={() => handleEnroll(course)}
                 disabled={enrolling === course.id}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -111,6 +165,49 @@ export default function Courses() {
           </div>
         ))}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedCourse && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Complete Payment</h2>
+            <p className="mb-4">
+              Course: {selectedCourse.title}<br />
+              Amount: {selectedCourse.price_formatted}
+            </p>
+            <form onSubmit={handlePaymentSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mobile Money Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Enter your mobile money number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  value={paymentFormData.phoneNumber}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, phoneNumber: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Pay Now
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
