@@ -16,8 +16,10 @@ export default function Layout({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const checkAuth = async () => {
       // Skip auth check for public paths
       if (publicPaths.includes(router.pathname)) {
@@ -54,6 +56,11 @@ export default function Layout({ children }) {
     window.location.href = '/login';
   };
 
+  // Don't render anything on the server
+  if (!mounted) {
+    return null;
+  }
+
   // Show loading state
   if (loading) {
     return (
@@ -65,7 +72,7 @@ export default function Layout({ children }) {
 
   // Don't show navigation on public paths
   if (publicPaths.includes(router.pathname)) {
-    return <main>{children}</main>;
+    return <div className="min-h-screen">{children}</div>;
   }
 
   const navigation = [
@@ -223,7 +230,7 @@ export default function Layout({ children }) {
         )}
       </Disclosure>
 
-      <main>{children}</main>
+      <div className="min-h-screen">{children}</div>
     </div>
   );
 } 
