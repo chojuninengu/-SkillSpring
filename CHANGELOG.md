@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2024-03-XX
+
+### Added
+
+#### Course Management
+- Implemented course listing endpoint (GET /courses)
+- Added course creation for mentors (POST /courses)
+- Added course detail view endpoint (GET /courses/:id)
+- Implemented course enrollment system (POST /courses/:id/enroll)
+
+#### Authentication & Authorization
+- Added middleware for token authentication
+- Implemented role-based access control (mentor, student, admin)
+- Added protection for mentor-only routes
+
+#### Enrollment System
+- Created enrollment model with status tracking
+- Added enrollment creation and management
+- Implemented course completion tracking
+- Added student course progress tracking
+
 ## [0.1.0] - 2024-03-XX
 
 ### Added
