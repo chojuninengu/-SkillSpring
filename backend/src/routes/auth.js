@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../db/db');
 const { authenticateToken } = require('../middleware/auth');
+const db = require('../config/database');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -11,13 +11,16 @@ router.post('/register', async (req, res) => {
     const { name, email, password, role = 'student' } = req.body;
 
     // Check if user exists
-    const userExists = await pool.query(
+    const userExists = await db.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists'
+      });
     }
 
     // Hash password
@@ -25,7 +28,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create user
-    const result = await pool.query(
+    const result = await db.query(
       'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
       [name, email, hashedPassword, role]
     );
@@ -40,17 +43,23 @@ router.post('/register', async (req, res) => {
     );
 
     res.status(201).json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
       }
     });
   } catch (error) {
     console.error('Error in register:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register user'
+    });
   }
 });
 
@@ -60,21 +69,27 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     // Check if user exists
-    const result = await pool.query(
+    const result = await db.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
     const user = result.rows[0];
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
     // Create token
@@ -85,17 +100,23 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
       }
     });
   } catch (error) {
     console.error('Error in login:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to login'
+    });
   }
 });
 
