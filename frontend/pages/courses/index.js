@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { courses, enrollments, handleApiError, handleApiSuccess } from '../../utils/api';
 
+// Helper function to format price from cents to dollars
+const formatPrice = (cents) => {
+  return `$${(cents / 100).toFixed(2)}`;
+};
+
 export default function Courses() {
   const router = useRouter();
   const [courseList, setCourseList] = useState(null);
@@ -93,7 +98,7 @@ export default function Courses() {
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-sm text-gray-500">By {course.mentor_name}</span>
                       <span className="text-lg font-medium text-gray-900">
-                        ${course.price}
+                        {formatPrice(course.price)}
                       </span>
                     </div>
                     <button
