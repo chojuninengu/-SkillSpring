@@ -4,6 +4,18 @@ import { getCurrentUser, isAuthenticated } from '../../../utils/auth';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+// Helper function to format FCFA amount
+const formatFCFA = (amount) => {
+  if (!amount) return '';
+  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+// Helper function to parse FCFA amount
+const parseFCFA = (formattedAmount) => {
+  if (!formattedAmount) return '';
+  return formattedAmount.replace(/,/g, '');
+};
+
 export default function CreateCourse() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -37,7 +49,7 @@ export default function CreateCourse() {
     try {
       const response = await axios.post('http://localhost:3001/api/courses', {
         ...formData,
-        price: parseFloat(formData.price),
+        price: parseInt(parseFCFA(formData.price)),
         duration: parseInt(formData.duration),
       });
 
@@ -51,7 +63,17 @@ export default function CreateCourse() {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === 'price') {
+      // Remove non-numeric characters except commas
+      const numericValue = value.replace(/[^\d,]/g, '');
+      // Format the number with commas
+      const formattedValue = formatFCFA(parseFCFA(numericValue));
+      setFormData({ ...formData, [name]: formattedValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   return (
@@ -99,19 +121,26 @@ export default function CreateCourse() {
               {/* Price */}
               <div>
                 <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                  Price (USD)
+                  Price (FCFA)
                 </label>
-                <input
-                  type="number"
-                  name="price"
-                  id="price"
-                  min="0"
-                  step="0.01"
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={formData.price}
-                  onChange={handleChange}
-                />
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <input
+                    type="text"
+                    name="price"
+                    id="price"
+                    required
+                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pl-12 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="0"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">FCFA</span>
+                  </div>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Enter amount in CFA Francs (e.g., 25,000)
+                </p>
               </div>
 
               {/* Duration */}
