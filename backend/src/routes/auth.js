@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db/db');
+const { authenticateToken } = require('../middleware/auth');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -96,6 +97,23 @@ router.post('/login', async (req, res) => {
     console.error('Error in login:', error);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+/**
+ * @route GET /api/auth/check
+ * @desc Check if user is authenticated
+ * @access Public
+ */
+router.get('/check', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name,
+      role: req.user.role
+    }
+  });
 });
 
 module.exports = router; 
