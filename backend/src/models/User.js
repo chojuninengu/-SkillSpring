@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
+const MentorAssignmentService = require('../services/mentorAssignmentService');
 
 const VALID_ROLES = ['student', 'mentor', 'admin'];
 
@@ -9,12 +10,44 @@ class User {
       throw new Error('Invalid role specified');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await db.query(
-      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email, hashedPassword, name, role]
-    );
-    return result.rows[0];
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const userResult = await client.query(
+        'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
+        [email, hashedPassword, name, role]
+      );
+      
+      const user = userResult.rows[0];
+
+      // If user is a mentor, initialize their capacity
+      if (role === 'mentor') {
+        await MentorAssignmentService.initializeMentorCapacity(user.id);
+      }
+      
+      // If user is a student, assign a mentor
+      if (role === 'student') {
+        try {
+          await MentorAssignmentService.assignMentorToStudent(user.id);
+        } catch (error) {
+          console.error('Failed to assign mentor:', error);
+          // Continue with user creation even if mentor assignment fails
+        }
+      }
+
+      await client.query('COMMIT');
+      return user;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   static async findByEmail(email) {
