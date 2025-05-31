@@ -2,10 +2,20 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentUser, isAuthenticated } from '../../utils/auth';
 
+// Helper function to format FCFA amount
+const formatFCFA = (amount) => {
+  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' FCFA';
+};
+
 export default function MentorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    totalRevenue: 0
+  });
 
   useEffect(() => {
     // Check authentication
@@ -21,6 +31,7 @@ export default function MentorDashboard() {
     }
 
     setUser(currentUser);
+    // TODO: Fetch actual stats from API
     setLoading(false);
   }, [router]);
 
@@ -59,7 +70,7 @@ export default function MentorDashboard() {
                   Total Courses
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  0
+                  {stats.totalCourses}
                 </dd>
               </div>
             </div>
@@ -71,7 +82,7 @@ export default function MentorDashboard() {
                   Total Students
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  0
+                  {stats.totalStudents}
                 </dd>
               </div>
             </div>
@@ -83,8 +94,11 @@ export default function MentorDashboard() {
                   Total Revenue
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                  $0
+                  {formatFCFA(stats.totalRevenue)}
                 </dd>
+                <p className="mt-1 text-sm text-gray-500">
+                  Total earnings from all courses
+                </p>
               </div>
             </div>
           </div>
