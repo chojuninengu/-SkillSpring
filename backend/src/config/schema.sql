@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS courses (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    price DECIMAL(10,2) NOT NULL,
+    price INTEGER NOT NULL,  -- Price in cents (e.g., 4999 = $49.99)
+    category VARCHAR(50),
     mentor_id INTEGER REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -34,7 +35,7 @@ CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
     course_id INTEGER REFERENCES courses(id),
-    amount DECIMAL(10,2) NOT NULL,
+    amount INTEGER NOT NULL,  -- Amount in cents
     status VARCHAR(50) DEFAULT 'pending',
     phone_number VARCHAR(15),
     transaction_id VARCHAR(255),
