@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { signIn } from '../utils/supabaseAuth';
+import { signIn } from '../utils/auth';
 import { toast } from 'react-toastify';
 
 export default function Login() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    identifier: '',
+    email: '',
     password: '',
   });
 
@@ -17,11 +17,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { session } = await signIn(formData.identifier, formData.password);
+      const result = await signIn(formData.email, formData.password);
       toast.success('Login successful!');
       
-      // Use window.location for redirect after successful login
-      window.location.href = '/dashboard';
+      // Redirect based on user role
+      const role = result.user.role;
+      if (role === 'mentor') {
+        window.location.href = '/mentor/dashboard';
+      } else if (role === 'student') {
+        window.location.href = '/dashboard';
+      } else {
+        window.location.href = '/admin/dashboard';
+      }
     } catch (error) {
       toast.error(error.message || 'Login failed');
     } finally {
@@ -51,20 +58,20 @@ export default function Login() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
-                Username or Email
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
               </label>
               <div className="mt-1">
                 <input
-                  id="identifier"
-                  name="identifier"
-                  type="text"
-                  autoComplete="username"
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={formData.identifier}
+                  value={formData.email}
                   onChange={handleChange}
-                  placeholder="Enter username or email"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
