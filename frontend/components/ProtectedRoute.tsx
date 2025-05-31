@@ -10,8 +10,10 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRouteProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const checkAuth = async () => {
       try {
         const user = await getCurrentUser();
@@ -34,6 +36,11 @@ export default function ProtectedRoute({ children, allowedRoles = [] }: Protecte
 
     checkAuth();
   }, [router, allowedRoles]);
+
+  // Don't render anything on the server
+  if (!mounted) {
+    return null;
+  }
 
   if (isLoading) {
     return (
