@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
@@ -6,10 +6,12 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 export default function Login() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ export default function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -30,16 +32,33 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store token
-      localStorage.setItem('token', data.token);
+      // Store token and user data
+      localStorage.setItem('token', data.data.token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
 
       toast.success('Login successful!');
-      router.push('/dashboard');
+      
+      // Redirect based on user role
+      const role = data.data.user.role;
+      if (role === 'mentor') {
+        router.push('/mentor/dashboard');
+      } else if (role === 'student') {
+        router.push('/dashboard');
+      } else if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error(error instanceof Error ? error.message : 'Login failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
@@ -70,9 +89,10 @@ export default function Login() {
                   type="email"
                   autoComplete="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={formData.email}
+                  onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
@@ -88,9 +108,10 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={formData.password}
+                  onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10"
+                  placeholder="Enter your password"
                 />
                 <button
                   type="button"
@@ -103,6 +124,14 @@ export default function Login() {
                     <FaEye className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link href="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
+                  Forgot your password?
+                </Link>
               </div>
             </div>
 
@@ -126,12 +155,18 @@ export default function Login() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  Need help?{' '}
-                  <Link href="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
-                    Forgot password
-                  </Link>
+                  New to SkillSpring?
                 </span>
               </div>
+            </div>
+
+            <div className="mt-6">
+              <Link
+                href="/register"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100"
+              >
+                Create an account
+              </Link>
             </div>
           </div>
         </div>
