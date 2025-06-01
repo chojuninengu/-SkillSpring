@@ -37,7 +37,7 @@ export default function Courses() {
 
   const handleEnroll = async (course) => {
     try {
-      console.log('Enrolling in course:', course);
+      console.log('Starting enrollment for course:', { id: course.id, title: course.title });
       setEnrolling(course.id);
       setSelectedCourse(course);
 
@@ -59,7 +59,10 @@ export default function Courses() {
   };
 
   const handlePayment = async () => {
-    if (!selectedCourse) return;
+    if (!selectedCourse) {
+      console.error('No course selected for payment');
+      return;
+    }
 
     if (!phoneNumber || phoneNumber.trim().length < 8) {
       toast.error('Please enter a valid phone number');
@@ -68,13 +71,15 @@ export default function Courses() {
 
     try {
       setProcessing(true);
-      console.log('Selected course:', selectedCourse);
-      // Create payment
-      const paymentResponse = await payments.create({
+      const paymentData = {
         courseId: selectedCourse.id,
         amount: selectedCourse.price,
         phoneNumber: phoneNumber.trim()
-      });
+      };
+      console.log('Sending payment request with data:', paymentData);
+
+      // Create payment
+      const paymentResponse = await payments.create(paymentData);
 
       if (paymentResponse.data.success) {
         toast.success('Successfully enrolled in course!');
@@ -83,12 +88,7 @@ export default function Courses() {
         router.push('/dashboard');
       }
     } catch (error) {
-      console.error('Payment error:', error);
-      console.error('Payment request data:', {
-        courseId: selectedCourse.id,
-        amount: selectedCourse.price,
-        phoneNumber: phoneNumber.trim()
-      });
+      console.error('Payment error:', error.response?.data || error.message);
       toast.error(error.response?.data?.message || 'Payment failed');
     } finally {
       setProcessing(false);
