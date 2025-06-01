@@ -199,6 +199,59 @@ class PaymentService {
             client.release();
         }
     }
+
+    static async getPaymentStatus(paymentId) {
+        const client = await db.pool.connect();
+        
+        try {
+            // Get payment details from database
+            const result = await client.query(
+                `SELECT status, amount, created_at 
+                 FROM payments 
+                 WHERE transaction_id = $1`,
+                [paymentId]
+            );
+
+            if (!result.rows.length) {
+                throw new Error('Payment not found');
+            }
+
+            const payment = result.rows[0];
+
+            // Check status from Nkwa API
+            try {
+                const response = await axios.get(
+                    `${NKWA_API_URL}/status/${paymentId}`,
+                    {
+                        headers: {
+                            'X-API-Key': NKWA_API_KEY,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                const { data } = response;
+                
+                // If status has changed, update our database
+                if (data.status && data.status !== payment.status) {
+                    await this.handlePaymentUpdate(paymentId, data.status);
+                    payment.status = data.status;
+                }
+            } catch (error) {
+                console.error('Error checking Nkwa API status:', error);
+                // Continue with our stored status if API check fails
+            }
+
+            return {
+                status: payment.status,
+                amount: payment.amount,
+                createdAt: payment.created_at
+            };
+
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = PaymentService; 
