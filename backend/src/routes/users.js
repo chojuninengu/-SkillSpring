@@ -1,15 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  updateUserRole, 
-  getUsersByRole, 
-  getCurrentUser 
-} = require('../controllers/userController');
-const { authenticateToken, isAdmin } = require('../middleware/auth');
+const { auth, isMentor } = require('../middleware/auth');
 const db = require('../config/database');
 
-// Protected routes - require authentication
-router.get('/me', authenticateToken, async (req, res) => {
+// Get current user profile
+router.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -38,8 +33,8 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Update current user
-router.put('/me', authenticateToken, async (req, res) => {
+// Update current user profile
+router.put('/me', auth, async (req, res) => {
   try {
     const { name, email } = req.body;
 
@@ -51,7 +46,10 @@ router.put('/me', authenticateToken, async (req, res) => {
       );
 
       if (emailExists.rows.length > 0) {
-        return res.status(400).json({ message: 'Email already taken' });
+        return res.status(400).json({
+          success: false,
+          message: 'Email already taken'
+        });
       }
     }
 
@@ -74,8 +72,25 @@ router.put('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Admin only routes
-router.put('/:userId/role', authenticateToken, isAdmin, updateUserRole);
-router.get('/role/:role', authenticateToken, isAdmin, getUsersByRole);
+// Get all students (mentor only)
+router.get('/students', auth, isMentor, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, name, email FROM users WHERE role = $1',
+      ['student']
+    );
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch students'
+    });
+  }
+});
 
 module.exports = router; 
