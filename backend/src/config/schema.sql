@@ -38,6 +38,10 @@ CREATE TABLE IF NOT EXISTS payments (
     amount INTEGER NOT NULL,  -- Amount in cents
     status VARCHAR(50) DEFAULT 'pending',
     phone_number VARCHAR(15),
-    transaction_id VARCHAR(255),
+    transaction_id VARCHAR(255) UNIQUE,
+    external_reference VARCHAR(255),
+    payment_method VARCHAR(50) DEFAULT 'mobile_money',
+    error_message TEXT,
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 ); 
