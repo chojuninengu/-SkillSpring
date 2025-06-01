@@ -25,7 +25,7 @@ export default function Courses() {
   const fetchCourses = async () => {
     try {
       const response = await courses.getAll();
-      console.log('Courses data:', response.data);
+      console.log('Received courses from API:', response.data);
       setCourseList(response.data.data);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -37,7 +37,19 @@ export default function Courses() {
 
   const handleEnroll = async (course) => {
     try {
-      console.log('Starting enrollment for course:', { id: course.id, title: course.title });
+      if (!course || !course.id) {
+        console.error('Invalid course data:', course);
+        toast.error('Invalid course selected');
+        return;
+      }
+
+      console.log('Starting enrollment for course:', {
+        id: course.id,
+        title: course.title,
+        price: course.price,
+        price_formatted: course.price_formatted
+      });
+
       setEnrolling(course.id);
       setSelectedCourse(course);
 
@@ -73,8 +85,8 @@ export default function Courses() {
     try {
       setProcessing(true);
       const paymentData = {
-        courseId: selectedCourse.id,
-        amount: selectedCourse.price,
+        courseId: parseInt(selectedCourse.id, 10), // Ensure courseId is a number
+        amount: parseInt(selectedCourse.price, 10), // Ensure amount is a number
         phoneNumber: phoneNumber.trim()
       };
       console.log('Initiating mobile money payment with data:', paymentData);
