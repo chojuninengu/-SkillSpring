@@ -74,7 +74,7 @@ export const enrollments = {
 
 // Payments API
 export const payments = {
-  create: (data) => api.post('/payments/pay', data),
+  create: (data) => api.post('/payments/collect', data),
   getHistory: () => api.get('/payments/history')
 };
 
