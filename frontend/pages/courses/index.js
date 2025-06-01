@@ -25,6 +25,7 @@ export default function Courses() {
   const fetchCourses = async () => {
     try {
       const response = await courses.getAll();
+      console.log('Courses data:', response.data);
       setCourseList(response.data.data);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -36,6 +37,7 @@ export default function Courses() {
 
   const handleEnroll = async (course) => {
     try {
+      console.log('Enrolling in course:', course);
       setEnrolling(course.id);
       setSelectedCourse(course);
 
