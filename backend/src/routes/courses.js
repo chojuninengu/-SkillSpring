@@ -10,6 +10,7 @@ const db = require('../config/database');
  */
 router.get('/', async (req, res) => {
   try {
+    console.log('Fetching all courses...');
     const result = await db.query(`
       SELECT 
         c.*,
@@ -20,11 +21,15 @@ router.get('/', async (req, res) => {
       ORDER BY c.created_at DESC
     `);
 
+    console.log('Raw courses from database:', result.rows);
+
     // Format the price in FCFA
     const courses = result.rows.map(course => ({
       ...course,
       price_formatted: course.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' FCFA'
     }));
+
+    console.log('Formatted courses with IDs:', courses.map(c => ({ id: c.id, title: c.title })));
 
     res.json({
       success: true,
