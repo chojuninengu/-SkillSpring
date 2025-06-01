@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { pool } = require('../db/db');
+const { auth, isMentor } = require('../middleware/auth');
+const db = require('../config/database');
 
 /**
  * @route GET /api/courses
@@ -10,7 +10,7 @@ const { pool } = require('../db/db');
  */
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await db.query(`
       SELECT 
         c.*,
         u.name as mentor_name,
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(`
+    const result = await db.query(`
       SELECT 
         c.*,
         u.name as mentor_name,
@@ -87,25 +87,28 @@ router.get('/:id', async (req, res) => {
  * @desc Create a new course
  * @access Private (Mentor only)
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', auth, isMentor, async (req, res) => {
   try {
     const { title, description, price, category } = req.body;
     const mentorId = req.user.id;
 
-    // Verify user is a mentor
-    if (req.user.role !== 'mentor') {
-      return res.status(403).json({
+    // Validate input
+    if (!title || !description || !price || !category) {
+      return res.status(400).json({
         success: false,
-        message: 'Only mentors can create courses'
+        message: 'Please provide all required fields'
       });
     }
 
-    const result = await pool.query(
+    const result = await db.query(
       'INSERT INTO courses (title, description, mentor_id, price, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [title, description, mentorId, price, category]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({
+      success: true,
+      data: result.rows[0]
+    });
   } catch (error) {
     console.error('Error creating course:', error);
     res.status(500).json({
