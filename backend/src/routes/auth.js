@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
 
     // Create token
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
@@ -94,21 +94,19 @@ router.post('/login', async (req, res) => {
 
     // Create token
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
+
+    // Remove password from user object
+    const { password: _, ...userWithoutPassword } = user;
 
     res.json({
       success: true,
       data: {
         token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
+        user: userWithoutPassword
       }
     });
   } catch (error) {
@@ -120,28 +118,24 @@ router.post('/login', async (req, res) => {
   }
 });
 
-/**
- * @route GET /api/auth/check
- * @desc Check if user is authenticated
- * @access Public
- */
-router.get('/check', authenticateToken, (req, res) => {
+// Check authentication status
+router.get('/check', auth, (req, res) => {
   res.json({
     success: true,
-    user: {
-      id: req.user.id,
-      email: req.user.email,
-      name: req.user.name,
-      role: req.user.role
+    data: {
+      user: req.user
     }
   });
 });
 
 // Verify token
-router.get('/verify', authenticateToken, (req, res) => {
+router.get('/verify', auth, (req, res) => {
   res.json({
     success: true,
-    message: 'Token is valid'
+    message: 'Token is valid',
+    data: {
+      user: req.user
+    }
   });
 });
 
