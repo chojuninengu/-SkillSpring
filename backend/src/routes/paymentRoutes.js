@@ -19,6 +19,28 @@ router.post('/initiate', authenticateToken, async (req, res) => {
     }
 });
 
+// Check payment status
+router.get('/status', authenticateToken, async (req, res) => {
+    try {
+        const { paymentId } = req.query;
+        
+        if (!paymentId) {
+            return res.status(400).json({ 
+                error: 'Payment ID is required' 
+            });
+        }
+
+        // Get payment status from database
+        const result = await PaymentService.getPaymentStatus(paymentId);
+        res.json(result);
+    } catch (error) {
+        console.error('Payment status check error:', error);
+        res.status(400).json({ 
+            error: error.message || 'Failed to check payment status' 
+        });
+    }
+});
+
 // Payment status update endpoint
 router.post('/status-update', async (req, res) => {
     try {
