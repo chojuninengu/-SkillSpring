@@ -2,7 +2,7 @@ const db = require('../config/database');
 const axios = require('axios');
 const crypto = require('crypto');
 
-const NKWA_API_URL = process.env.NKWA_API_URL || 'https://api.nkwa.cm/pay';
+const NKWA_API_URL = process.env.NKWA_API_URL || 'https://api.pay.staging.mynkwa.com/collect';
 const NKWA_API_KEY = process.env.NKWA_API_KEY;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
@@ -44,39 +44,45 @@ class PaymentService {
 
             const course = courseResult.rows[0];
             const user = userResult.rows[0];
-            const transactionRef = this.generateTransactionRef();
 
-            // Create pending payment record
-            const paymentResult = await client.query(
-                `INSERT INTO payments (user_id, course_id, status, amount, transaction_id)
-                 VALUES ($1, $2, $3, $4, $5)
-                 RETURNING id`,
-                [userId, courseId, 'pending', course.price, transactionRef]
-            );
+            // Ensure phone number is in correct format (2376XXXXXXX)
+            const formattedPhone = this.formatPhoneNumber(user.phone);
 
             // Call Nkwa API
             const nkwaResponse = await axios.post(NKWA_API_URL, {
-                phone: user.phone,
                 amount: course.price,
-                transactionRef,
-                metadata: {
-                    userId,
-                    courseId,
-                    paymentId: paymentResult.rows[0].id
-                }
+                phoneNumber: formattedPhone
             }, {
                 headers: {
-                    'Authorization': `Bearer ${NKWA_API_KEY}`,
+                    'X-API-Key': NKWA_API_KEY,
                     'Content-Type': 'application/json'
                 }
             });
 
+            const { data } = nkwaResponse;
+
+            // Create payment record
+            const paymentResult = await client.query(
+                `INSERT INTO payments (
+                    user_id, course_id, status, amount, transaction_id
+                ) VALUES ($1, $2, $3, $4, $5)
+                RETURNING id`,
+                [
+                    userId,
+                    courseId,
+                    data.status || 'pending',
+                    course.price,
+                    data.id // Using Nkwa's payment ID as our transaction ID
+                ]
+            );
+
             await client.query('COMMIT');
 
             return {
-                transactionId: transactionRef,
+                paymentId: data.id,
                 amount: course.price,
-                status: 'pending'
+                status: data.status || 'pending',
+                message: 'Payment initiated. Check Nkwa App to confirm.'
             };
 
         } catch (error) {
@@ -85,6 +91,17 @@ class PaymentService {
         } finally {
             client.release();
         }
+    }
+
+    static formatPhoneNumber(phone) {
+        // Remove any non-digit characters
+        const digits = phone.replace(/\D/g, '');
+        
+        // If number starts with '+237', remove it
+        const withoutPrefix = digits.replace(/^(\+?237)/, '');
+        
+        // Ensure the number starts with '237'
+        return withoutPrefix.startsWith('237') ? withoutPrefix : `237${withoutPrefix}`;
     }
 
     static async handleWebhook(payload, signature) {
@@ -112,6 +129,48 @@ class PaymentService {
                  WHERE transaction_id = $2 AND id = $3
                  RETURNING user_id, course_id`,
                 [status, transactionId, paymentId]
+            );
+
+            if (!paymentResult.rows.length) {
+                throw new Error('Payment not found');
+            }
+
+            // If payment successful, create enrollment
+            if (status === 'success') {
+                const { user_id, course_id } = paymentResult.rows[0];
+                
+                await client.query(
+                    `INSERT INTO enrollments (user_id, course_id)
+                     VALUES ($1, $2)
+                     ON CONFLICT (user_id, course_id) DO NOTHING`,
+                    [user_id, course_id]
+                );
+            }
+
+            await client.query('COMMIT');
+            return { success: true };
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    static async handlePaymentUpdate(paymentId, status) {
+        const client = await db.pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+
+            // Update payment status
+            const paymentResult = await client.query(
+                `UPDATE payments 
+                 SET status = $1, updated_at = CURRENT_TIMESTAMP
+                 WHERE transaction_id = $2
+                 RETURNING user_id, course_id`,
+                [status, paymentId]
             );
 
             if (!paymentResult.rows.length) {
