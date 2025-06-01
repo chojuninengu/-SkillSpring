@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     console.log('Fetching all courses...');
     
     // First, let's check what courses exist
-    const courseCheck = await db.query('SELECT id, title FROM courses');
+    const courseCheck = await db.query('SELECT id, title, price FROM courses');
     console.log('Available courses in database:', courseCheck.rows);
 
     const result = await db.query(`
