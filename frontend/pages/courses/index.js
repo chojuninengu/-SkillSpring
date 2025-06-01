@@ -59,8 +59,9 @@ export default function Courses() {
   };
 
   const handlePayment = async () => {
-    if (!selectedCourse) {
-      console.error('No course selected for payment');
+    if (!selectedCourse || !selectedCourse.id) {
+      console.error('Invalid course data for payment:', selectedCourse);
+      toast.error('Invalid course selected');
       return;
     }
 
@@ -76,21 +77,50 @@ export default function Courses() {
         amount: selectedCourse.price,
         phoneNumber: phoneNumber.trim()
       };
-      console.log('Sending payment request with data:', paymentData);
+      console.log('Initiating mobile money payment with data:', paymentData);
 
       // Create payment
       const paymentResponse = await payments.create(paymentData);
+      console.log('Payment initiated:', paymentResponse.data);
 
       if (paymentResponse.data.success) {
-        toast.success('Successfully enrolled in course!');
-        setShowPaymentModal(false);
-        setPhoneNumber('');
-        router.push('/dashboard');
+        // Show instructions to user
+        toast.success(paymentResponse.data.message || 'Please check your phone to confirm payment');
+        
+        // Start polling for payment status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await payments.checkStatus(paymentResponse.data.data.payment.id);
+            if (statusResponse.data.data.status === 'success') {
+              clearInterval(pollInterval);
+              toast.success('Payment successful! You are now enrolled in the course.');
+              setShowPaymentModal(false);
+              setPhoneNumber('');
+              router.push('/dashboard');
+            } else if (statusResponse.data.data.status === 'failed') {
+              clearInterval(pollInterval);
+              toast.error('Payment failed. Please try again.');
+              setProcessing(false);
+            }
+          } catch (error) {
+            console.error('Error checking payment status:', error);
+          }
+        }, 5000); // Check every 5 seconds
+
+        // Stop polling after 2 minutes if no response
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setProcessing(false);
+          toast.error('Payment timeout. Please try again.');
+        }, 120000);
       }
     } catch (error) {
-      console.error('Payment error:', error.response?.data || error.message);
+      console.error('Payment error details:', {
+        error: error.response?.data || error.message,
+        courseId: selectedCourse.id,
+        course: selectedCourse
+      });
       toast.error(error.response?.data?.message || 'Payment failed');
-    } finally {
       setProcessing(false);
     }
   };
