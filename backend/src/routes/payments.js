@@ -1,21 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const { initiatePayment } = require('../utils/payment');
-const { authenticateToken } = require('../middleware/auth');
-const { pool } = require('../db/db');
+const { auth } = require('../middleware/auth');
+const db = require('../config/database');
 
 /**
  * @route POST /api/payments/collect
  * @desc Initiate a mobile money payment collection and enroll in course
  * @access Private (requires authentication)
  */
-router.post('/collect', authenticateToken, async (req, res) => {
+router.post('/collect', auth, async (req, res) => {
   try {
     const { amount, phoneNumber, courseId } = req.body;
-    const studentId = req.user.id;
+    const userId = req.user.id;
 
     // Verify course exists and get its details
-    const courseResult = await pool.query(
+    const courseResult = await db.query(
       'SELECT * FROM courses WHERE id = $1',
       [courseId]
     );
@@ -37,33 +36,75 @@ router.post('/collect', authenticateToken, async (req, res) => {
       });
     }
 
-    // Initiate payment
-    const paymentResult = await initiatePayment(amount, phoneNumber);
+    // Check if already enrolled
+    const enrollmentCheck = await db.query(
+      'SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2',
+      [userId, courseId]
+    );
 
-    // If payment is successful, create enrollment
-    if (paymentResult.success) {
-      await pool.query(
-        'INSERT INTO enrollments (student_id, course_id, status) VALUES ($1, $2, $3)',
-        [studentId, courseId, 'active']
-      );
+    if (enrollmentCheck.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Already enrolled in this course'
+      });
     }
 
-    // Return success response
-    res.json({
+    // Create payment record
+    const paymentResult = await db.query(
+      'INSERT INTO payments (user_id, course_id, amount) VALUES ($1, $2, $3) RETURNING *',
+      [userId, courseId, course.price]
+    );
+
+    // Create enrollment
+    const enrollmentResult = await db.query(
+      'INSERT INTO enrollments (user_id, course_id, progress) VALUES ($1, $2, $3) RETURNING *',
+      [userId, courseId, 0]
+    );
+
+    res.status(201).json({
       success: true,
-      message: 'Payment successful and enrollment created',
       data: {
-        ...paymentResult,
-        courseId,
-        enrollmentStatus: 'active'
+        payment: paymentResult.rows[0],
+        enrollment: enrollmentResult.rows[0]
       }
     });
-
   } catch (error) {
     console.error('Payment route error:', error);
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message || 'Payment failed'
+    });
+  }
+});
+
+// Get user's payment history
+router.get('/history', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const payments = await db.query(
+      `SELECT 
+        p.*,
+        c.title as course_title,
+        c.description as course_description,
+        u.name as mentor_name
+       FROM payments p
+       JOIN courses c ON p.course_id = c.id
+       JOIN users u ON c.mentor_id = u.id
+       WHERE p.user_id = $1
+       ORDER BY p.created_at DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      data: payments.rows
+    });
+  } catch (error) {
+    console.error('Error fetching payment history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payment history'
     });
   }
 });
