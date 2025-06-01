@@ -3,10 +3,14 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const db = require('../config/database');
 const axios = require('axios');
+const mockPaymentService = require('../services/mockPayment');
 
 // NKWA API configuration
 const NKWA_API_URL = process.env.NKWA_API_URL || 'https://api.nkwa.dev/v1';
 const NKWA_API_KEY = process.env.NKWA_API_KEY;
+
+// Use mock payment in development, real NKWA in production
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 /**
  * @route POST /api/payments/collect
@@ -64,39 +68,46 @@ router.post('/collect', auth, async (req, res) => {
     }
 
     try {
-      // Initialize NKWA payment
-      const nkwaResponse = await axios.post(`${NKWA_API_URL}/collect`, {
-        amount: amount,
-        phone: phoneNumber,
-        description: `Payment for course: ${course.title}`,
-        external_reference: `course_${courseId}_user_${userId}_${Date.now()}`,
-        callback_url: `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/payments/webhook`
-      }, {
-        headers: {
-          'Authorization': `Bearer ${NKWA_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use mock payment service in development
+      const paymentResponse = isDevelopment
+        ? await mockPaymentService.initiatePayment({
+            amount,
+            phoneNumber,
+            description: `Payment for course: ${course.title}`,
+            external_reference: `course_${courseId}_user_${userId}_${Date.now()}`
+          })
+        : await axios.post(`${NKWA_API_URL}/collect`, {
+            amount: amount,
+            phone: phoneNumber,
+            description: `Payment for course: ${course.title}`,
+            external_reference: `course_${courseId}_user_${userId}_${Date.now()}`,
+            callback_url: `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/payments/webhook`
+          }, {
+            headers: {
+              'Authorization': `Bearer ${NKWA_API_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
       // Create pending payment record
       const paymentResult = await db.query(
         'INSERT INTO payments (user_id, course_id, amount, status, phone_number, transaction_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [userId, courseId, course.price, 'pending', phoneNumber, nkwaResponse.data.transaction_id]
+        [userId, courseId, course.price, 'pending', phoneNumber, paymentResponse.transaction_id]
       );
 
       res.status(201).json({
         success: true,
         data: {
           payment: paymentResult.rows[0],
-          transaction: nkwaResponse.data
+          transaction: paymentResponse
         },
-        message: 'Payment initiated. Please confirm on your mobile phone.'
+        message: 'Payment initiated. Please wait while we process your payment.'
       });
-    } catch (nkwaError) {
-      console.error('NKWA API Error:', nkwaError.response?.data || nkwaError.message);
+    } catch (paymentError) {
+      console.error('Payment service error:', paymentError);
       return res.status(400).json({
         success: false,
-        message: 'Failed to initiate mobile money payment. Please try again.'
+        message: 'Failed to initiate payment. Please try again.'
       });
     }
   } catch (error) {
@@ -175,38 +186,50 @@ router.get('/:id/status', auth, async (req, res) => {
       });
     }
 
-    // If payment is pending, check status with NKWA
+    // If payment is pending, check status
     if (payment.rows[0].status === 'pending') {
       try {
-        const nkwaResponse = await axios.get(
-          `${NKWA_API_URL}/transactions/${payment.rows[0].transaction_id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${NKWA_API_KEY}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        const statusResponse = isDevelopment
+          ? await mockPaymentService.checkStatus(payment.rows[0].transaction_id)
+          : await axios.get(
+              `${NKWA_API_URL}/transactions/${payment.rows[0].transaction_id}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${NKWA_API_KEY}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
 
         // Update payment status if changed
-        if (nkwaResponse.data.status !== payment.rows[0].status) {
+        if (statusResponse.status !== payment.rows[0].status) {
           await db.query(
             'UPDATE payments SET status = $1, completed_at = CASE WHEN $1 = \'success\' THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id = $2',
-            [nkwaResponse.data.status, paymentId]
+            [statusResponse.status, paymentId]
           );
 
           // If payment is successful, create enrollment
-          if (nkwaResponse.data.status === 'success') {
+          if (statusResponse.status === 'success') {
             await db.query(
-              'INSERT INTO enrollments (user_id, course_id, progress) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+              'INSERT INTO enrollments (user_id, course_id, progress) VALUES ($1, $2, $3)',
               [userId, payment.rows[0].course_id, 0]
             );
           }
-
-          payment.rows[0].status = nkwaResponse.data.status;
         }
-      } catch (nkwaError) {
-        console.error('Error checking NKWA status:', nkwaError);
+
+        return res.json({
+          success: true,
+          data: {
+            ...payment.rows[0],
+            status: statusResponse.status
+          }
+        });
+      } catch (statusError) {
+        console.error('Status check error:', statusError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to check payment status'
+        });
       }
     }
 
@@ -215,8 +238,8 @@ router.get('/:id/status', auth, async (req, res) => {
       data: payment.rows[0]
     });
   } catch (error) {
-    console.error('Error checking payment status:', error);
-    res.status(500).json({
+    console.error('Payment status check error:', error);
+    res.status(400).json({
       success: false,
       message: 'Failed to check payment status'
     });
