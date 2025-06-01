@@ -26,6 +26,16 @@ export default function Courses() {
     try {
       const response = await courses.getAll();
       console.log('Received courses from API:', response.data);
+      
+      // Log each course's ID and title
+      response.data.data.forEach(course => {
+        console.log('Course from API:', {
+          id: course.id,
+          title: course.title,
+          price: course.price
+        });
+      });
+      
       setCourseList(response.data.data);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -43,6 +53,8 @@ export default function Courses() {
         return;
       }
 
+      // Log the exact course object being used
+      console.log('Raw course object:', course);
       console.log('Starting enrollment for course:', {
         id: course.id,
         title: course.title,
@@ -84,6 +96,13 @@ export default function Courses() {
 
     try {
       setProcessing(true);
+      // Log the selected course before creating payment
+      console.log('Selected course for payment:', {
+        id: selectedCourse.id,
+        title: selectedCourse.title,
+        price: selectedCourse.price
+      });
+
       const paymentData = {
         courseId: parseInt(selectedCourse.id, 10), // Ensure courseId is a number
         amount: parseInt(selectedCourse.price, 10), // Ensure amount is a number
