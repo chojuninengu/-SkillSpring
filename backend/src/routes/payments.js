@@ -13,11 +13,15 @@ router.post('/collect', auth, async (req, res) => {
     const { amount, phoneNumber, courseId } = req.body;
     const userId = req.user.id;
 
+    console.log('Payment request received:', { amount, phoneNumber, courseId, userId });
+
     // Verify course exists and get its details
     const courseResult = await db.query(
       'SELECT * FROM courses WHERE id = $1',
       [courseId]
     );
+
+    console.log('Course query result:', courseResult.rows);
 
     if (courseResult.rows.length === 0) {
       return res.status(404).json({
@@ -27,6 +31,7 @@ router.post('/collect', auth, async (req, res) => {
     }
 
     const course = courseResult.rows[0];
+    console.log('Found course:', course);
 
     // Verify amount matches course price
     if (amount !== course.price) {
