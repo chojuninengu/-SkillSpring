@@ -1,50 +1,85 @@
 const jwt = require('jsonwebtoken');
-const { pool } = require('../db/db');
+const db = require('../config/database');
 
-const authenticateToken = async (req, res, next) => {
+const auth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+    // Get token from header
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No authentication token provided'
+      });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Get user from database
-    const result = await pool.query(
+    const result = await db.query(
       'SELECT id, name, email, role FROM users WHERE id = $1',
-      [decoded.id]
+      [decoded.userId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'User not found' });
+      throw new Error('User not found');
     }
 
+    // Add user to request
     req.user = result.rows[0];
+    req.token = token;
+
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid token' });
+    console.error('Auth middleware error:', error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authentication token'
+      });
+    }
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication token expired'
+      });
+    }
+
+    res.status(401).json({
+      success: false,
+      message: 'Authentication failed'
+    });
   }
 };
 
+// Middleware to check if user is a mentor
 const isMentor = (req, res, next) => {
   if (req.user.role !== 'mentor') {
-    return res.status(403).json({ message: 'Access denied. Mentor role required.' });
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Mentor role required.'
+    });
   }
   next();
 };
 
-const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied. Admin role required.' });
+// Middleware to check if user is a student
+const isStudent = (req, res, next) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Student role required.'
+    });
   }
   next();
 };
 
 module.exports = {
-  authenticateToken,
+  auth,
   isMentor,
-  isAdmin
+  isStudent
 }; 
