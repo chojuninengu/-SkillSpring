@@ -11,6 +11,11 @@ const db = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     console.log('Fetching all courses...');
+    
+    // First, let's check what courses exist
+    const courseCheck = await db.query('SELECT id, title FROM courses');
+    console.log('Available courses in database:', courseCheck.rows);
+
     const result = await db.query(`
       SELECT 
         c.*,
@@ -21,7 +26,7 @@ router.get('/', async (req, res) => {
       ORDER BY c.created_at DESC
     `);
 
-    console.log('Raw courses from database:', result.rows);
+    console.log('Full course details:', result.rows);
 
     // Format the price in FCFA
     const courses = result.rows.map(course => ({
@@ -29,7 +34,12 @@ router.get('/', async (req, res) => {
       price_formatted: course.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' FCFA'
     }));
 
-    console.log('Formatted courses with IDs:', courses.map(c => ({ id: c.id, title: c.title })));
+    console.log('Sending formatted courses:', courses.map(c => ({
+      id: c.id,
+      title: c.title,
+      price: c.price,
+      price_formatted: c.price_formatted
+    })));
 
     res.json({
       success: true,
