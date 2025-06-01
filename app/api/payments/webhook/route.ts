@@ -3,7 +3,8 @@ import { headers } from 'next/headers';
 
 export async function POST(request: Request) {
     try {
-        const signature = headers().get('x-nkwa-signature');
+        const headersList = headers();
+        const signature = headersList.get('x-nkwa-signature');
         
         if (!signature) {
             return NextResponse.json(
