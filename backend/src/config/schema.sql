@@ -1,3 +1,9 @@
+-- Drop existing tables in correct order
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS enrollments;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS users;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
