@@ -24,6 +24,21 @@ async function seedDatabase() {
       mentorId = mentorCheck.rows[0].id;
     }
 
+    // Create a student user
+    const studentCheck = await db.query(
+      'SELECT id FROM users WHERE email = $1',
+      ['student@example.com']
+    );
+
+    if (studentCheck.rows.length === 0) {
+      const studentPassword = await bcrypt.hash('student123', 10);
+      await db.query(
+        `INSERT INTO users (name, email, password, role) 
+         VALUES ($1, $2, $3, $4)`,
+        ['Jane Smith', 'student@example.com', studentPassword, 'student']
+      );
+    }
+
     // Clear existing enrollments and payments
     await db.query('DELETE FROM enrollments');
     await db.query('DELETE FROM payments');
@@ -90,6 +105,9 @@ async function seedDatabase() {
     console.log('Mentor credentials:');
     console.log('Email: mentor@example.com');
     console.log('Password: mentor123');
+    console.log('\nStudent credentials:');
+    console.log('Email: student@example.com');
+    console.log('Password: student123');
 
     // Close the database connection
     await db.pool.end();
