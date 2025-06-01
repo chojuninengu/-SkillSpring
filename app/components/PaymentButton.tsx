@@ -20,7 +20,7 @@ export default function PaymentButton({ courseId, price, isEnrolled = false }: P
             return;
         }
 
-        if (!confirm('Confirm payment via Nkwa App?')) {
+        if (!confirm('Do you want to pay via Nkwa App?')) {
             return;
         }
 
@@ -40,17 +40,58 @@ export default function PaymentButton({ courseId, price, isEnrolled = false }: P
                 throw new Error(data.error || 'Payment initiation failed');
             }
 
-            toast.success('Payment initiated. Confirm in the Nkwa App.');
+            toast.success(data.message || 'Payment initiated. Check Nkwa App to confirm.');
             
-            // Optional: Poll for payment status
-            // You could implement a polling mechanism here to check payment status
-            // and redirect to course page once confirmed
+            // Start polling for payment status
+            if (data.paymentId) {
+                pollPaymentStatus(data.paymentId);
+            }
 
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Payment failed');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const pollPaymentStatus = async (paymentId: string) => {
+        const maxAttempts = 30; // Poll for 5 minutes (10 seconds interval)
+        let attempts = 0;
+
+        const checkStatus = async () => {
+            try {
+                const response = await fetch(`/api/payments/status?paymentId=${paymentId}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    toast.success('Payment successful! Redirecting to course...');
+                    router.refresh(); // Refresh the page to show enrolled status
+                    return true;
+                } else if (data.status === 'failed') {
+                    toast.error('Payment failed. Please try again.');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+            }
+            return false;
+        };
+
+        const poll = async () => {
+            if (attempts >= maxAttempts) {
+                toast.error('Payment status check timed out. Please refresh the page.');
+                return;
+            }
+
+            attempts++;
+            const isDone = await checkStatus();
+
+            if (!isDone) {
+                setTimeout(poll, 10000); // Check every 10 seconds
+            }
+        };
+
+        setTimeout(poll, 10000); // Start first check after 10 seconds
     };
 
     return (
