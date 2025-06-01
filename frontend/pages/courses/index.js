@@ -66,6 +66,7 @@ export default function Courses() {
 
     try {
       setProcessing(true);
+      console.log('Selected course:', selectedCourse);
       // Create payment
       const paymentResponse = await payments.create({
         courseId: selectedCourse.id,
@@ -81,6 +82,11 @@ export default function Courses() {
       }
     } catch (error) {
       console.error('Payment error:', error);
+      console.error('Payment request data:', {
+        courseId: selectedCourse.id,
+        amount: selectedCourse.price,
+        phoneNumber: phoneNumber.trim()
+      });
       toast.error(error.response?.data?.message || 'Payment failed');
     } finally {
       setProcessing(false);
