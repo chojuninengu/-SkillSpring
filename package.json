@@ -1,7 +1,9 @@
 {
   "dependencies": {
+    "@types/next-auth": "^3.13.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "next-auth": "^4.24.11",
     "react-hot-toast": "^2.5.2"
   }
 }
