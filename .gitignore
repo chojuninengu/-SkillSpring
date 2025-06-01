@@ -34,4 +34,7 @@ yarn-error.log*
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Environment variables
+.env.*.local 
