@@ -38,7 +38,11 @@ export async function POST(request: Request) {
             throw new Error(data.error || 'Payment initiation failed');
         }
 
-        return NextResponse.json(data);
+        return NextResponse.json({
+            paymentId: data.paymentId,
+            status: data.status,
+            message: data.message
+        });
     } catch (error) {
         console.error('Payment initiation error:', error);
         return NextResponse.json(
