@@ -19,20 +19,23 @@ router.post('/initiate', authenticateToken, async (req, res) => {
     }
 });
 
-// Webhook endpoint
-router.post('/webhook', async (req, res) => {
+// Payment status update endpoint
+router.post('/status-update', async (req, res) => {
     try {
-        const signature = req.headers['x-nkwa-signature'];
-        if (!signature) {
-            return res.status(401).json({ error: 'Missing signature' });
+        const { paymentId, status } = req.body;
+        
+        if (!paymentId || !status) {
+            return res.status(400).json({ 
+                error: 'Payment ID and status are required' 
+            });
         }
 
-        await PaymentService.handleWebhook(req.body, signature);
+        await PaymentService.handlePaymentUpdate(paymentId, status);
         res.json({ success: true });
     } catch (error) {
-        console.error('Webhook processing error:', error);
+        console.error('Payment status update error:', error);
         res.status(400).json({ 
-            error: error.message || 'Failed to process webhook' 
+            error: error.message || 'Failed to update payment status' 
         });
     }
 });
