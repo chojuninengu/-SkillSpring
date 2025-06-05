@@ -1,4 +1,4 @@
- # SkillSpring Platform
+  # SkillSpring Platform
 
 SkillSpring is a modern mentorship and learning platform that connects skilled mentors with eager learners. The platform facilitates course creation, enrollment, and interactive learning experiences.
 
